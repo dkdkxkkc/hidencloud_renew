@@ -370,19 +370,26 @@ class HidenCloudBot:
         target_action = ""
 
         for form in soup.find_all('form'):
+            action = form.get('action', '')
+            if not action or 'balance/add' in action:
+                continue
             btn = form.find('button')
-            if btn and 'pay' in btn.get_text().lower():
-                action = form.get('action', '')
-                if action and 'balance/add' not in action:
-                    target_form = form
-                    target_action = action
-                    break
+            # Match both English "pay" and Chinese payment button text
+            if btn and ('pay' in btn.get_text().lower() or '支付' in btn.get_text()):
+                target_form = form
+                target_action = action
+                break
 
+        # Fallback: any form whose action contains 'invoice' or 'payment' and has a submit button
         if not target_form:
-            self.log("⚪ 页面未找到支付表单 (可能已支付)。")
-            # 已支付也记录，防止重复尝试
-            self.processed_invoices.add(current_url)
-            return
+            for form in soup.find_all('form'):
+                action = form.get('action', '')
+                if any(kw in action for kw in ['/invoice/', '/payment/']) and 'balance/add' not in action:
+                    if form.find('button'):
+                        target_form = form
+                        target_action = action
+                        self.log(f"🔁 降级匹配到支付表单: {action}")
+                        break
 
         payload = {}
         for inp in target_form.find_all('input'):
