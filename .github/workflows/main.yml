@@ -41,4 +41,22 @@ jobs:
         WEBDAV_URL: ${{ secrets.WEBDAV_URL }}
         WEBDAV_USER: ${{ secrets.WEBDAV_USER }}
         WEBDAV_PASS: ${{ secrets.WEBDAV_PASS }}
-      run: python main.py
+      run: |
+            set +e
+
+            echo "=== Attempt 1 ==="
+            python main.py
+            code=$?
+
+            if [ "$code" -eq 0 ]; then
+              echo "Attempt 1 succeeded"
+              exit 0
+            fi
+
+            echo "Attempt 1 failed with exit code: $code"
+            echo "Sleep 10 minutes before retry..."
+            sleep 600
+
+            echo "=== Attempt 2 ==="
+            python main.py
+            exit $?
